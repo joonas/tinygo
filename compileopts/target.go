@@ -413,6 +413,7 @@ func defaultTarget(options *Options) (*TargetSpec, error) {
 			spec.CFlags = append(spec.CFlags, "-mno-outline-atomics")
 		}
 		spec.ExtraFiles = append(spec.ExtraFiles,
+			"src/internal/task/task_threads.c",
 			"src/runtime/runtime_unix.c",
 			"src/runtime/signal.c")
 	case "windows":
