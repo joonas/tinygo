@@ -12,8 +12,8 @@ type Mutex struct {
 	blocked task.Stack
 }
 
-//go:linkname scheduleTask runtime.runqueuePushBack
-func scheduleTask(*task.Task)
+//go:linkname resumeTask runtime.resumeTask
+func resumeTask(*task.Task)
 
 func (m *Mutex) Lock() {
 	if m.islocked() {
@@ -33,7 +33,7 @@ func (m *Mutex) Unlock() {
 
 	// Wake up a blocked task, if applicable.
 	if t := m.blocked.Pop(); t != nil {
-		scheduleTask(t)
+		resumeTask(t)
 	} else {
 		m.setlock(false)
 	}
@@ -172,7 +172,7 @@ func (rw *RWMutex) maybeUnblockReaders() bool {
 		}
 
 		n++
-		scheduleTask(t)
+		resumeTask(t)
 	}
 	if n == 0 {
 		return false
@@ -189,7 +189,7 @@ func (rw *RWMutex) maybeUnblockWriter() bool {
 	}
 
 	rw.state = rwMutexStateWLocked
-	scheduleTask(t)
+	resumeTask(t)
 
 	return true
 }

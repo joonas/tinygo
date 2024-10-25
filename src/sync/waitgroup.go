@@ -30,7 +30,7 @@ func (wg *WaitGroup) Add(delta int) {
 		// In the current implementation, this is always correct.
 		if wg.counter == 0 {
 			for t := wg.waiters.Pop(); t != nil; t = wg.waiters.Pop() {
-				scheduleTask(t)
+				resumeTask(t)
 			}
 		}
 	}
