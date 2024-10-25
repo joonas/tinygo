@@ -33,3 +33,6 @@ func getGoroutineStackSize(fn uintptr) uintptr
 
 //go:linkname runtime_alloc runtime.alloc
 func runtime_alloc(size uintptr, layout unsafe.Pointer) unsafe.Pointer
+
+//go:linkname resumeTask runtime.resumeTask
+func resumeTask(*Task)
