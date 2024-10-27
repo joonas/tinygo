@@ -1,3 +1,5 @@
+//go:build !scheduler.threads
+
 package llsync
 
 // PMutex is a real mutex on systems that can be either preemptive or threaded,
