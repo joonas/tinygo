@@ -7,17 +7,18 @@ package runtime
 // may be the only memory allocator possible.
 
 import (
+	"internal/llsync"
 	"unsafe"
 )
 
 // Ever-incrementing pointer: no memory is freed.
-var heapptr = heapStart
+var heapptr llsync.Uintptr
 
 // Total amount allocated for runtime.MemStats
-var gcTotalAlloc uint64
+var gcTotalAlloc llsync.Uint64
 
 // Total number of calls to alloc()
-var gcMallocs uint64
+var gcMallocs llsync.Uint64
 
 // Total number of objected freed; for leaking collector this stays 0
 const gcFrees = 0
@@ -31,11 +32,14 @@ func alloc(size uintptr, layout unsafe.Pointer) unsafe.Pointer {
 	// much. And by using platform-native data types (e.g. *uint8 for 8-bit
 	// systems).
 	size = align(size)
-	addr := heapptr
-	gcTotalAlloc += uint64(size)
-	gcMallocs++
-	heapptr += size
-	for heapptr >= heapEnd {
+
+	// Track statistics. These are stored separately so are not strictly atomic,
+	// which means that ReadMemStats might read a _slightly_ inconsistent state.
+	gcTotalAlloc.Add(uint64(size))
+	gcMallocs.Add(1)
+
+	nextAddr := heapptr.Add(size)
+	for nextAddr >= heapEnd {
 		// Try to increase the heap and check again.
 		if growHeap() {
 			continue
@@ -43,6 +47,8 @@ func alloc(size uintptr, layout unsafe.Pointer) unsafe.Pointer {
 		// Failed to make the heap bigger, so we must really be out of memory.
 		runtimePanic("out of memory")
 	}
+	addr := nextAddr - size
+
 	pointer := unsafe.Pointer(addr)
 	zero_new_alloc(pointer, size)
 	return pointer
@@ -69,18 +75,19 @@ func free(ptr unsafe.Pointer) {
 // The returned memory statistics are up to date as of the
 // call to ReadMemStats. This would not do GC implicitly for you.
 func ReadMemStats(m *MemStats) {
+	totalAlloc := gcTotalAlloc.Load()
 	m.HeapIdle = 0
-	m.HeapInuse = gcTotalAlloc
+	m.HeapInuse = totalAlloc
 	m.HeapReleased = 0 // always 0, we don't currently release memory back to the OS.
 
 	m.HeapSys = m.HeapInuse + m.HeapIdle
 	m.GCSys = 0
-	m.TotalAlloc = gcTotalAlloc
-	m.Mallocs = gcMallocs
+	m.TotalAlloc = totalAlloc
+	m.Mallocs = gcMallocs.Load()
 	m.Frees = gcFrees
 	m.Sys = uint64(heapEnd - heapStart)
 	// no free -- current in use heap is the total allocated
-	m.HeapAlloc = gcTotalAlloc
+	m.HeapAlloc = totalAlloc
 	m.Alloc = m.HeapAlloc
 }
 
@@ -94,7 +101,7 @@ func SetFinalizer(obj interface{}, finalizer interface{}) {
 
 func initHeap() {
 	// preinit() may have moved heapStart; reset heapptr
-	heapptr = heapStart
+	heapptr.Store(heapStart)
 }
 
 // setHeapEnd sets a new (larger) heapEnd pointer.
