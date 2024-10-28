@@ -1,10 +1,12 @@
 package sync
 
+import "internal/llsync"
+
 // This file implements just enough of sync.Map to get packages to compile. It
 // is no more efficient than a map with a lock.
 
 type Map struct {
-	lock Mutex
+	lock llsync.PMutex
 	m    map[interface{}]interface{}
 }
 
