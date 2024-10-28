@@ -244,6 +244,7 @@ func pathsToOverride(goMinor int, needsSyscallPackage bool) map[string]bool {
 		"internal/bytealg/":           false,
 		"internal/cm/":                false,
 		"internal/fuzz/":              false,
+		"internal/llsync/":            false,
 		"internal/reflectlite/":       false,
 		"internal/gclayout":           false,
 		"internal/task/":              false,
