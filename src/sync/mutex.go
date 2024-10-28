@@ -1,39 +1,40 @@
 package sync
 
 import (
+	"internal/llsync"
 	"internal/task"
 	_ "unsafe"
 )
 
 type Mutex struct {
-	locked  bool
-	blocked task.Stack
+	futex llsync.Futex
 }
 
 //go:linkname resumeTask runtime.resumeTask
 func resumeTask(*task.Task)
 
 func (m *Mutex) Lock() {
-	if m.locked {
-		// Push self onto stack of blocked tasks, and wait to be resumed.
-		m.blocked.Push(task.Current())
-		task.Pause()
+	// Fast path: try to take an uncontended lock.
+	if m.futex.CompareAndSwap(0, 1) {
+		// We obtained the mutex.
 		return
 	}
 
-	m.locked = true
+	// Try to lock the mutex. If it changed from 0 to 2, we took a contended
+	// lock.
+	for m.futex.Swap(2) != 0 {
+		// Wait until we get resumed in Unlock.
+		m.futex.Wait(2)
+	}
 }
 
 func (m *Mutex) Unlock() {
-	if !m.locked {
+	if old := m.futex.Swap(0); old == 0 {
+		// Mutex wasn't locked before.
 		panic("sync: unlock of unlocked Mutex")
-	}
-
-	// Wake up a blocked task, if applicable.
-	if t := m.blocked.Pop(); t != nil {
-		resumeTask(t)
-	} else {
-		m.locked = false
+	} else if old == 2 {
+		// Mutex was a contended lock, so we need to wake the next waiter.
+		m.futex.Wake()
 	}
 }
 
@@ -43,11 +44,12 @@ func (m *Mutex) Unlock() {
 // and use of TryLock is often a sign of a deeper problem
 // in a particular use of mutexes.
 func (m *Mutex) TryLock() bool {
-	if m.locked {
-		return false
+	// Fast path: try to take an uncontended lock.
+	if m.futex.CompareAndSwap(0, 1) {
+		// We obtained the mutex.
+		return true
 	}
-	m.Lock()
-	return true
+	return false
 }
 
 type RWMutex struct {
