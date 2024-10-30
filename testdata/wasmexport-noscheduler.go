@@ -1,5 +1,7 @@
 package main
 
+import "time"
+
 func init() {
 	println("called init")
 }
@@ -9,6 +11,7 @@ func callTestMain()
 
 func main() {
 	// main.main is not used when using -buildmode=c-shared.
+	time.Sleep(time.Millisecond)
 	callTestMain()
 }
 
