@@ -20,6 +20,10 @@ func wasmEntryCommand() {
 	run()
 	if mainExited {
 		beforeExit()
+
+		// To make sure wasm_exec.js knows that we've exited, call proc_exit
+		// explicitly.
+		proc_exit(0)
 	}
 }
 
