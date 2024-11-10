@@ -5,7 +5,7 @@
 name: Docker
 on:
   push:
-    branches: [ dev, fix-docker-llvm-build ]
+    branches: [ dev, fix-docker-llvm-build, docker/build-linux_arm64 ]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -41,16 +41,10 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            tinygo/tinygo-dev
             ghcr.io/${{ github.repository_owner }}/tinygo-dev
           tags: |
             type=sha,format=long
             type=raw,value=latest
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
       - name: Log in to Github Container Registry
         uses: docker/login-action@v3
         with:
@@ -64,47 +58,6 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64,linux/arm64
           cache-from: type=gha
           cache-to: type=gha,mode=max
-      - name: Trigger Drivers repo build on Github Actions
-        run: |
-          curl -X POST \
-          -H "Authorization: Bearer ${{secrets.GHA_ACCESS_TOKEN}}" \
-          -H "Accept: application/vnd.github.v3+json" \
-          https://api.github.com/repos/tinygo-org/drivers/actions/workflows/build.yml/dispatches \
-          -d '{"ref": "dev"}'
-      - name: Trigger Bluetooth repo build on Github Actions
-        run: |
-          curl -X POST \
-          -H "Authorization: Bearer ${{secrets.GHA_ACCESS_TOKEN}}" \
-          -H "Accept: application/vnd.github.v3+json" \
-          https://api.github.com/repos/tinygo-org/bluetooth/actions/workflows/linux.yml/dispatches \
-          -d '{"ref": "dev"}'
-      - name: Trigger TinyFS repo build on Github Actions
-        run: |
-          curl -X POST \
-          -H "Authorization: Bearer ${{secrets.GHA_ACCESS_TOKEN}}" \
-          -H "Accept: application/vnd.github.v3+json" \
-          https://api.github.com/repos/tinygo-org/tinyfs/actions/workflows/build.yml/dispatches \
-          -d '{"ref": "dev"}'
-      - name: Trigger TinyFont repo build on Github Actions
-        run: |
-          curl -X POST \
-          -H "Authorization: Bearer ${{secrets.GHA_ACCESS_TOKEN}}" \
-          -H "Accept: application/vnd.github.v3+json" \
-          https://api.github.com/repos/tinygo-org/tinyfont/actions/workflows/build.yml/dispatches \
-          -d '{"ref": "dev"}'
-      - name: Trigger TinyDraw repo build on Github Actions
-        run: |
-          curl -X POST \
-          -H "Authorization: Bearer ${{secrets.GHA_ACCESS_TOKEN}}" \
-          -H "Accept: application/vnd.github.v3+json" \
-          https://api.github.com/repos/tinygo-org/tinydraw/actions/workflows/build.yml/dispatches \
-          -d '{"ref": "dev"}'
-      - name: Trigger TinyTerm repo build on Github Actions
-        run: |
-          curl -X POST \
-          -H "Authorization: Bearer ${{secrets.GHA_ACCESS_TOKEN}}" \
-          -H "Accept: application/vnd.github.v3+json" \
-          https://api.github.com/repos/tinygo-org/tinyterm/actions/workflows/build.yml/dispatches \
-          -d '{"ref": "dev"}'
