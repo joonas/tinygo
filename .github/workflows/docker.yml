@@ -14,6 +14,11 @@ concurrency:
 jobs:
   push_to_registry:
     name: build-push-dev
+    strategy:
+      matrix:
+        platform:
+          - linux/amd64
+          - linux/arm64
     runs-on: ubuntu-latest
     permissions:
       packages: write
@@ -58,6 +63,6 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ matrix.platform }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
