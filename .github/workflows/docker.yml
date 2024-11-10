@@ -43,7 +43,7 @@ jobs:
       - name: Setup docker (missing on MacOS)
         if: ${{ contains(matrix.os, 'macos') }}
         run: |
-          brew install docker
+          brew install colima docker
           colima start
       - name: Check out the repo
         uses: actions/checkout@v4
